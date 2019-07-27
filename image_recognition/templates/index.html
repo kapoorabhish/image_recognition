@@ -1,0 +1,195 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>jslib-html5-camera-photo.min</title>
+  </head>
+  <body>
+    <script src="{% static "jslib-html5-camera-photo.min.js" %}"></script>
+
+    <div id="divId">
+      <label for="facingModeSelectId">facingMode</label>
+      <select id="facingModeSelectId" name="facingMode">
+       <option value="ENVIRONMENT" selected="selected">environment</option>
+       <option value="USER">user</option>
+      </select>
+      <button id="startDefaultAllButtonId">startDefaultAll</button>
+      <button id="startDefaultResolutionButtonId">startDefaultResolution</button>
+      <button id="startMaxResolutionId">startMaxResolution</button>
+      <button id="takePhotoButtonId">takePhoto</button>
+      <button id="stopCameraButtonId">stopCamera</button>
+      <br/>
+      <div id="cameraSettingsId"></div>
+      <video id="videoId" autoplay="true" playsInline></video>
+      <img alt="imgId" id="imgId">
+    </div>
+    <div id="root">
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input id="personName" placeholder="Person name in the image.">
+      <input id="submit" type="button" value="Submit">
+    </form>
+
+    <script>
+        var FACING_MODES = JslibHtml5CameraPhoto.FACING_MODES;
+        var IMAGE_TYPES = JslibHtml5CameraPhoto.IMAGE_TYPES;
+        // get video and image elements
+        var videoElement = document.getElementById('videoId');
+        var imgElement = document.getElementById('imgId');
+        // get select and buttons elements
+        var facingModeSelectElement =
+            document.getElementById('facingModeSelectId');
+        var startCameraDefaultAllButtonElement =
+            document.getElementById('startDefaultAllButtonId');
+        var startDefaultResolutionButtonElement =
+            document.getElementById('startDefaultResolutionButtonId');
+        var startMaxResolutionButtonElement =
+            document.getElementById('startMaxResolutionId');
+        var takePhotoButtonElement =
+            document.getElementById('takePhotoButtonId');
+        var stopCameraButtonElement =
+            document.getElementById('stopCameraButtonId');
+        var cameraSettingElement =
+            document.getElementById('cameraSettingsId');
+        var submitButton = document.getElementById('submit');
+
+        // instantiate JslibHtml5CameraPhoto with the videoElement
+        var cameraPhoto = new JslibHtml5CameraPhoto.default(videoElement);
+        function startCameraDefaultAll () {
+          cameraPhoto.startCamera()
+            .then(() => {
+              var log = `Camera started with default All`;
+              console.log(log);
+            })
+            .catch((error) => {
+              console.error('Camera not started!', error);
+            });
+        }
+        // start the camera with prefered environment facingMode ie. ()
+        // if the environment facingMode is not avalible, it will fallback
+        // to the default camera avalible.
+        function startCameraDefaultResolution () {
+          var facingMode = facingModeSelectElement.value;
+          cameraPhoto.startCamera(FACING_MODES[facingMode])
+            .then(() => {
+              var log =
+                  `Camera started with default resolution and ` +
+                  `prefered facingMode : ${facingMode}`;
+              console.log(log);
+            })
+            .catch((error) => {
+              console.error('Camera not started!', error);
+            });
+        }
+        function dataURItoBlob(data) {
+          var binStr = atob(data).split(',')[1],
+          len = binStr.length,
+          arr = new Uint8Array(len);
+
+          for (var i = 0; i < len; i++) {
+            arr[i] = binStr.charCodeAt(i);
+          }
+          return new Blob(arr);
+        }
+        // function called by the buttons.
+        function takePhoto () {
+          var sizeFactor = 1;
+          var imageType = IMAGE_TYPES.JPG;
+          var imageCompression = 1;
+          var config = {
+            sizeFactor,
+            imageType,
+            imageCompression
+          };
+          var dataUri = cameraPhoto.getDataUri(config);
+          imgElement.src = dataUri;
+        }
+        
+        var csrfcookie = function() {
+            var cookieValue = null,
+                name = 'csrftoken';
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        };
+
+        function uploadPhoto(){
+          var imgElement = document.getElementById('imgId');
+          var personName = document.getElementById('personName')
+          
+          var formData = new FormData(); 
+          formData.append('img', imgElement.src);
+          formData.append('personName', personName.value);
+          var xhr = new XMLHttpRequest();
+          xhr.open('post', '/');
+          xhr.setRequestHeader("X-CSRFToken", csrfcookie());
+          xhr.send(formData);
+          xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+              alert(xhr.response);
+            }
+          }
+        }
+
+        function showCameraSettings () {
+          var settings = cameraPhoto.getCameraSettings();
+          // by default is no camera...
+          var innerHTML = 'No camera';
+          if (settings) {
+            var {aspectRatio, frameRate, height, width} = settings;
+            innerHTML = `
+                aspectRatio:${aspectRatio}
+                frameRate: ${frameRate}
+                height: ${height}
+                width: ${width}
+            `;
+          }
+          cameraSettingElement.innerHTML = innerHTML;
+        }
+        function stopCamera () {
+          cameraPhoto.stopCamera()
+            .then(() => {
+              console.log('Camera stoped!');
+            })
+            .catch((error) => {
+              console.log('No camera to stop!:', error);
+            });
+        }
+        function startCameraMaxResolution () {
+          var facingMode = facingModeSelectElement.value;
+          cameraPhoto.startCameraMaxResolution(FACING_MODES[facingMode])
+            .then(() => {
+              var log =
+                  `Camera started with maximum resoluton and ` +
+                  `prefered facingMode : ${facingMode}`;
+              console.log(log);
+            })
+            .catch((error) => {
+              console.error('Camera not started!', error);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+          // update camera setting
+          setInterval(() => {
+            showCameraSettings();
+          }, 500);
+          // bind the buttons to the right functions.
+          startCameraDefaultAllButtonElement.onclick = startCameraDefaultAll;
+          startDefaultResolutionButtonElement.onclick = startCameraDefaultResolution;
+          startMaxResolutionButtonElement.onclick = startCameraMaxResolution;
+          takePhotoButtonElement.onclick = takePhoto;
+          stopCameraButtonElement.onclick = stopCamera;
+          submitButton.onclick = uploadPhoto;
+        });
+    </script>
+</body>
+</html>
