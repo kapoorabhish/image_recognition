@@ -16,6 +16,7 @@
       <button id="startDefaultAllButtonId">startDefaultAll</button>
       <button id="startDefaultResolutionButtonId">startDefaultResolution</button>
       <button id="startMaxResolutionId">startMaxResolution</button>
+      <br>
       <button id="takePhotoButtonId">takePhoto</button>
       <button id="stopCameraButtonId">stopCamera</button>
       <br/>
@@ -25,6 +26,7 @@
     </div>
     <div id="root">
     </div>
+    <input id="uploadFile" type="file" name="pic" accept="image/*">
     <form method="POST">
       {% csrf_token %}
       <input id="personName" placeholder="Person name in the image.">
@@ -53,7 +55,18 @@
         var cameraSettingElement =
             document.getElementById('cameraSettingsId');
         var submitButton = document.getElementById('submit');
+        var uploadFile = document.getElementById("uploadFile");
 
+        function selectPhoto()
+        {
+          var reader = new FileReader();
+          reader.addEventListener("load", function () {
+            imgElement.src = reader.result;
+          }, false);
+          reader.readAsDataURL(uploadFile.files[0]);
+          
+        }
+      
         // instantiate JslibHtml5CameraPhoto with the videoElement
         var cameraPhoto = new JslibHtml5CameraPhoto.default(videoElement);
         function startCameraDefaultAll () {
@@ -82,16 +95,7 @@
               console.error('Camera not started!', error);
             });
         }
-        function dataURItoBlob(data) {
-          var binStr = atob(data).split(',')[1],
-          len = binStr.length,
-          arr = new Uint8Array(len);
-
-          for (var i = 0; i < len; i++) {
-            arr[i] = binStr.charCodeAt(i);
-          }
-          return new Blob(arr);
-        }
+      
         // function called by the buttons.
         function takePhoto () {
           var sizeFactor = 1;
@@ -189,6 +193,7 @@
           takePhotoButtonElement.onclick = takePhoto;
           stopCameraButtonElement.onclick = stopCamera;
           submitButton.onclick = uploadPhoto;
+          uploadFile.onchange = selectPhoto;
         });
     </script>
 </body>
